@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة شبكة المعلومات التفاعلية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            background: linear-gradient(180deg, #60b8ff 0%, #a5dbff 58%, #85d664 58%, #5cb83c 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* حركات السحب والعناصر العائمة */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.04); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+            50% { box-shadow: 0 0 0 12px rgba(250, 204, 21, 0); }
+        }
+
+        .animate-float { animation: floatSlow 3.5s ease-in-out infinite; }
+        .animate-wiggle { animation: wiggle 2.8s ease-in-out infinite; }
+        .animate-pop { animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-shake { animation: shake 0.45s ease-in-out; }
+        .animate-glow { animation: pulseGlow 2s infinite; }
+
+        /* تصميم اللوحة الخشبية */
+        .wood-board {
+            background: linear-gradient(180deg, #df9444 0%, #c87629 100%);
+            border: 5px solid #8a4612;
+            box-shadow: 0 14px 0 #7a3b0d, 0 22px 30px rgba(0, 0, 0, 0.25), inset 0 4px 8px rgba(255, 224, 178, 0.6);
+            position: relative;
+        }
+        .wood-plank {
+            background: #fdf6e7;
+            border: 3px solid #b56522;
+            box-shadow: inset 0 -3px 0 #e6d5b8, 0 4px 6px rgba(100, 48, 10, 0.2);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .wood-plank:hover:not(.solved) {
+            transform: translateY(-3px) scale(1.015);
+            background: #fffdf8;
+            border-color: #f59e0b;
+            box-shadow: 0 8px 15px rgba(122, 59, 13, 0.3);
+        }
+        .wood-plank:active:not(.solved) {
+            transform: scale(0.98);
+        }
+        .wood-plank.solved {
+            background: linear-gradient(90deg, #ecfdf5 0%, #d1fae5 100%);
+            border-color: #10b981;
+        }
+
+        /* شارات الأرقام الملونة */
+        .badge-num {
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.22), inset 0 3px 4px rgba(255, 255, 255, 0.5);
+            flex-shrink: 0;
+        }
+        .badge-1 { background: linear-gradient(135deg, #ff7eb3, #ff4785); border: 3px solid #d62865; }
+        .badge-2 { background: linear-gradient(135deg, #b88cff, #8c52ff); border: 3px solid #6328d6; }
+        .badge-3 { background: linear-gradient(135deg, #a3e635, #65a30d); border: 3px solid #4d7c0f; }
+        .badge-4 { background: linear-gradient(135deg, #fbbf24, #f59e0b); border: 3px solid #b45309; }
+        .badge-5 { background: linear-gradient(135deg, #38bdf8, #0284c7); border: 3px solid #0369a1; }
+        .badge-6 { background: linear-gradient(135deg, #fb7185, #e11d48); border: 3px solid #9f1239; }
+
+        /* خيارات الإجابة */
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 5px 0 #cbd5e1;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 0 #94a3b8;
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #94a3b8;
+        }
+
+        /* ألوان أقلام السبورة */
+        .color-swatch {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .color-swatch.active {
+            transform: scale(1.22);
+            box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #0284c7;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col justify-between p-3 sm:p-5">
+
+    <!-- خلفية السحب والتلال الكرتونية -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div class="absolute top-6 right-10 w-32 h-12 bg-white/85 rounded-full blur-[1px] animate-float"></div>
+        <div class="absolute top-14 left-16 w-40 h-14 bg-white/80 rounded-full blur-[1px] animate-float" style="animation-delay: 1.2s;"></div>
+        <div class="absolute top-28 right-1/3 w-28 h-10 bg-white/75 rounded-full blur-[1px] animate-float" style="animation-delay: 2s;"></div>
+    </div>
+
+    <!-- الشريط العلوي: اسم الطالب + النجوم + الصوت + إعادة اللعب -->
+    <header class="relative z-10 max-w-5xl w-full mx-auto mb-4">
+        <div class="bg-white/95 backdrop-blur-md border-4 border-amber-400 rounded-3xl p-3 sm:px-6 shadow-xl flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- مساحة اسم الطالب -->
+            <div class="flex items-center gap-2 bg-sky-50 border-2 border-sky-300 rounded-2xl px-3 py-1.5 flex-grow sm:flex-grow-0">
+                <span class="text-2xl">🧑‍🎓</span>
+                <label for="student-name" class="font-extrabold text-sky-900 text-sm sm:text-base whitespace-nowrap">اسم الطالب:</label>
+                <input id="student-name" type="text" placeholder="اكتب اسمك هنا يا بطل..." 
+                       class="bg-transparent border-b-2 border-sky-400 focus:border-amber-500 outline-none font-bold text-slate-800 px-2 py-0.5 w-36 sm:w-48 text-sm sm:text-base placeholder:text-slate-400">
+            </div>
+
+            <!-- عداد النجوم والتقدم -->
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-100 border-2 border-amber-400 rounded-2xl px-4 py-1.5 flex items-center gap-2 shadow-inner">
+                    <span class="text-2xl animate-bounce">⭐</span>
+                    <span class="font-black text-amber-800 text-base sm:text-lg"><span id="score-count">0</span> / 6</span>
+                </div>
+
+                <!-- زر كتم/تشغيل الصوت -->
+                <button id="sound-toggle" onclick="toggleSound()" title="تشغيل أو كتم الصوت"
+                        class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold p-2.5 rounded-2xl shadow-md transition-transform active:scale-90">
+                    <span id="sound-icon" class="text-xl">🔊</span>
+                </button>
+
+                <!-- زر إعادة اللعب -->
+                <button onclick="resetGame()" title="إعادة اللعبة"
+                        class="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-3.5 py-2 rounded-2xl shadow-md flex items-center gap-1.5 transition-transform active:scale-95 text-sm sm:text-base">
+                    <span>🔄</span>
+                    <span class="hidden sm:inline">إعادة</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي: الولد المفكر + اللوحة الخشبية للأسئلة -->
+    <main class="relative z-10 max-w-5xl w-full mx-auto my-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+        
+        <!-- القسم الأيمن: شخصية الولد المفكر وعلامة الاستفهام + العبارات الإيجابية والوطنية فوق الرأس -->
+        <div class="lg:col-span-4 flex flex-col items-center justify-center order-2 lg:order-1">
+            <div class="relative flex flex-col items-center">
+                
+                <!-- فقاعة العبارات الإيجابية والوطنية التفاعلية فوق الرأس -->
+        <!-- القسم الأيمن: شخصية الولد المفكر + العبارات الإيجابية والوطنية فوق الرأس -->
+        <div class="lg:col-span-4 flex flex-col items-center justify-center order-2 lg:order-1">
+            <div class="relative flex flex-col items-center">
+                
+                <!-- فقاعة العبارات الإيجابية والوطنية التفاعلية فوق الرأس -->
+                <button type="button" onclick="nextMotivationalPhrase()" title="اضغط لعبارة محفزة أو وطنية جديدة"
+                        class="mb-3 bg-white hover:bg-amber-50 border-3 border-emerald-500 rounded-2xl px-4 py-2.5 shadow-lg text-center max-w-xs relative transition-transform active:scale-95 cursor-pointer z-20">
+                    <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                        <span class="text-sm">🇸🇦</span>
+                        <span class="text-xs font-extrabold text-emerald-700">رسالة البطل (اضغط للتجديد)</span>
+                        <span class="text-sm">🌟</span>
+                    </div>
+                    <p id="mascot-speech" class="text-slate-800 font-extrabold text-sm sm:text-base leading-relaxed">
+                        أنت بطل ذكي ومبدع، ووطننا الغالي يفخر بك! 🇸🇦✨
+                    </p>
+                </button>
+
+                <!-- رسمة كرتونية للولد والكتب -->
+                <svg class="w-44 h-44 sm:w-52 sm:h-52 drop-shadow-xl" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- الجسم والثوب السعودي -->
+                    <path d="M55 205C55 162 78 142 110 142C142 142 165 162 165 205H55Z" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="4"/>
+                    <path d="M110 142V188" stroke="#CBD5E1" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="110" cy="156" r="2.5" fill="#94A3B8"/>
+                    <circle cx="110" cy="168" r="2.5" fill="#94A3B8"/>
+                    <!-- الرقبة -->
+                    <rect x="98" y="124" width="24" height="22" rx="10" fill="#FCD5B5"/>
+                    <!-- الرأس -->
+                    <circle cx="110" cy="92" r="44" fill="#FDE0C6" stroke="#E2A77B" stroke-width="3"/>
+                    <!-- الأذنان -->
+                    <circle cx="65" cy="95" r="9" fill="#FCD5B5" stroke="#E2A77B" stroke-width="2.5"/>
+                    <circle cx="155" cy="95" r="9" fill="#FCD5B5" stroke="#E2A77B" stroke-width="2.5"/>
+                    <!-- الشعر -->
+                    <path d="M66 86C64 54 86 38 112 38C138 38 156 54 154 86C148 72 135 66 122 68C114 58 96 60 88 70C78 68 70 75 66 86Z" fill="#4A2C18"/>
+                    <!-- الحواجب -->
+                    <path d="M84 76Q93 70 101 75" stroke="#4A2C18" stroke-width="3.5" stroke-linecap="round"/>
+                    <path d="M119 75Q127 70 136 76" stroke="#4A2C18" stroke-width="3.5" stroke-linecap="round"/>
+                    <!-- العيون -->
+                    <circle cx="93" cy="90" r="7" fill="#2D1B10"/>
+                    <circle cx="95" cy="88" r="2.5" fill="#FFFFFF"/>
+                    <circle cx="127" cy="90" r="7" fill="#2D1B10"/>
+                    <circle cx="129" cy="88" r="2.5" fill="#FFFFFF"/>
+                    <!-- الخدود والفم -->
+                    <ellipse cx="81" cy="103" rx="6" ry="3.5" fill="#FCA5A5" opacity="0.6"/>
+                    <ellipse cx="139" cy="103" rx="6" ry="3.5" fill="#FCA5A5" opacity="0.6"/>
+                    <path d="M101 111Q110 119 119 111" stroke="#9A3412" stroke-width="3.5" stroke-linecap="round"/>
+                    <!-- اليد المفكرة -->
+                    <circle cx="125" cy="134" r="11" fill="#FDE0C6" stroke="#E2A77B" stroke-width="2.5"/>
+                    <!-- مجموعة الكتب الملونة -->
+                    <rect x="20" y="188" width="76" height="14" rx="5" fill="#F97316" stroke="#C2410C" stroke-width="2.5"/>
+                    <rect x="25" y="174" width="72" height="14" rx="5" fill="#84CC16" stroke="#4D7C0F" stroke-width="2.5"/>
+                    <rect x="18" y="160" width="76" height="14" rx="5" fill="#0EA5E9" stroke="#0369A1" stroke-width="2.5"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- القسم الأيسر: اللوحة الخشبية للأسئلة -->
+        <div class="lg:col-span-8 order-1 lg:order-2">
+            <div class="wood-board rounded-[2rem] p-4 sm:p-6 pt-8 sm:pt-9">
+                
+                <!-- أيقونة الحاسوب المحمول أعلى اللوحة -->
+                <div class="absolute -top-7 left-6 sm:left-10 bg-slate-800 border-4 border-slate-600 rounded-2xl px-4 py-1.5 shadow-xl flex items-center gap-2 animate-float">
+                    <span class="text-2xl sm:text-3xl">💻</span>
+                    <span class="text-sky-300 font-black text-xs sm:text-sm">شَبَكَةُ المَعْلُومَاتِ</span>
+                </div>
+
+                <!-- عنوان اللوحة -->
+                <div class="text-center mb-4">
+                    <span class="inline-block bg-amber-900/85 text-amber-100 font-extrabold text-xs sm:text-sm px-4 py-1 rounded-full border border-amber-400/50">
+                        اضغط على كل لوح خشبي للإجابة عن السؤال وجمع النجوم ⭐
+                    </span>
+                </div>
+
+                <!-- قائمة الألواح الخشبية للأسئلة الستة -->
+                <div id="questions-board" class="space-y-3">
+                    <!-- يتم توليد الألواح عبر الجافاسكربت -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- التذييل وتوقيع المعلمة -->
+    <footer class="relative z-10 max-w-5xl w-full mx-auto mt-5 text-center">
+        <div class="inline-flex items-center gap-2 bg-white/95 border-2 border-amber-400 px-6 py-2 rounded-full shadow-md">
+            <span class="text-lg">🌸</span>
+            <span class="font-black text-slate-800 text-sm sm:text-base">تصميم المعلمة: بدرية حكمي</span>
+            <span class="text-lg">🌸</span>
+        </div>
+    </footer>
+
+    <!-- نافذة السؤال التفاعلية (Modal) -->
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div id="modal-card" class="bg-white border-4 border-amber-400 rounded-[2rem] max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative animate-pop my-auto">
+            
+            <!-- رأس النافذة -->
+            <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b-2 border-slate-100">
+                <div class="flex items-center gap-3">
+                    <span id="modal-badge" class="badge-num badge-1">١</span>
+                    <span id="modal-category" class="bg-sky-100 text-sky-800 font-extrabold text-xs sm:text-sm px-3 py-1 rounded-full">
+                        فهم المقروء
+                    </span>
+                </div>
+                <button onclick="closeModal()" class="bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 font-black w-10 h-10 rounded-2xl flex items-center justify-center text-xl transition-colors">
+                    ✕
+                </button>
+            </div>
+
+            <!-- نص السؤال -->
+            <h2 id="modal-question-text" class="text-xl sm:text-2xl font-black text-slate-800 leading-relaxed mb-5 text-center bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
+                نص السؤال هنا
+            </h2>
+
+            <!-- منطقة الخيارات (للأسئلة 1 إلى 5) -->
+            <div id="mcq-container" class="space-y-3">
+                <!-- تُضاف أزرار الاختيارات هنا -->
+            </div>
+
+            <!-- منطقة سبورة تحليل الكلمة (للسؤال 6: الإنترنت) -->
+            <div id="syllable-board-container" class="hidden space-y-4">
+                
+                <!-- الكلمة المستهدفة وشريط الأدوات -->
+                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-extrabold text-sky-900">الكلمة:</span>
+                        <button type="button" onclick="animateTargetWord()" title="اضغط لسماع مقاطع الكلمة"
+                                class="bg-white hover:bg-amber-50 border-2 border-sky-400 text-sky-900 font-black text-xl sm:text-2xl px-4 py-1 rounded-xl shadow-sm transition-transform active:scale-95">
+                            الإنْتَرْنِت
+                        </button>
+                    </div>
+
+                    <!-- أزرار زيادة ونقصان الحجرات (+ و -) -->
+                    <div class="flex items-center gap-2 bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5">
+                        <span class="text-xs sm:text-sm font-extrabold text-slate-700">الحجرات:</span>
+                        <button type="button" onclick="changeSlotCount(-1)" title="إنقاص حجرة"
+                                class="w-9 h-9 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xl flex items-center justify-center shadow active:scale-90">
+                            -
+                        </button>
+                        <span id="slot-count-display" class="font-black text-lg text-slate-800 w-6 text-center">4</span>
+                        <button type="button" onclick="changeSlotCount(1)" title="زيادة حجرة"
+                                class="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl flex items-center justify-center shadow active:scale-90">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <!-- شريط اختيار ألوان القلم -->
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2">
+                    <span class="text-xs sm:text-sm font-extrabold text-slate-700">🎨 اختر لون القلم للكتابة باليد:</span>
+                    <div class="flex items-center gap-2.5">
+                        <button type="button" onclick="setPenColor('#0f172a', this)" class="color-swatch active w-7 h-7 rounded-full bg-slate-900 border-2 border-white shadow" title="أسود"></button>
+                        <button type="button" onclick="setPenColor('#0284c7', this)" class="color-swatch w-7 h-7 rounded-full bg-sky-600 border-2 border-white shadow" title="أزرق"></button>
+                        <button type="button" onclick="setPenColor('#dc2626', this)" class="color-swatch w-7 h-7 rounded-full bg-red-600 border-2 border-white shadow" title="أحمر"></button>
+                        <button type="button" onclick="setPenColor('#16a34a', this)" class="color-swatch w-7 h-7 rounded-full bg-green-600 border-2 border-white shadow" title="أخضر"></button>
+                        <button type="button" onclick="setPenColor('#7c3aed', this)" class="color-swatch w-7 h-7 rounded-full bg-violet-600 border-2 border-white shadow" title="بنفسجي"></button>
+                    </div>
+                </div>
+
+                <!-- سبورة التحليل البيضاء وحجرات الكتابة اليدوية بدون أي إطارات متغيرة -->
+                <div class="bg-white border-4 border-slate-300 rounded-3xl p-3 sm:p-4 shadow-inner">
+                    <p class="text-center text-xs sm:text-sm font-bold text-slate-500 mb-3">
+                        ✍️ اكتب كل مقطع صوتي في حجرة من اليمين إلى اليسار (انقر بلمسة خفيفة لكتابة الحروف والنقاط فوراً)
+                    </p>
+                    <div id="slots-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3" dir="rtl">
+                        <!-- تُولّد حجرات الكتابة اليدوية هنا -->
+                    </div>
+                </div>
+
+                <!-- زر التحقق من الإجابة -->
+                <div class="flex justify-center pt-1">
+                    <button id="verify-handwriting-btn" type="button" onclick="verifySyllableAnalysis()"
+                            class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-lg px-8 py-3.5 rounded-2xl shadow-lg border-b-4 border-emerald-800 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                        <span>✅</span>
+                        <span>تحقق من إجابتي</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- رسالة التغذية الراجعة داخل النافذة -->
+            <div id="feedback-box" class="hidden mt-4 p-4 rounded-2xl font-extrabold text-center text-base sm:text-lg border-2"></div>
+        </div>
+    </div>
+
+    <!-- نافذة الفوز النهائية -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white border-4 border-amber-400 rounded-[2rem] max-w-md w-full p-6 text-center shadow-2xl animate-pop">
+            <div class="text-6xl mb-3 animate-bounce">🏆</div>
+            <h2 class="text-2xl sm:text-3xl font-black text-amber-600 mb-2">أحسنت يا بطل!</h2>
+            <p id="win-student-msg" class="text-slate-700 font-bold text-lg mb-4 leading-relaxed">
+                لقد أتممت جميع الأسئلة بنجاح وحصلت على 6 نجوم!
+            </p>
+            <div class="flex justify-center gap-1 text-3xl mb-5">
+                <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+            </div>
+            <button onclick="resetGame()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg py-3 rounded-2xl shadow-lg border-b-4 border-emerald-700 transition-transform active:scale-95">
+                العب مرة أخرى 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. بيانات الأسئلة والعبارات التحفيزية والوطنية
+        // ==========================================
+        const questionsData = [
+            {
+                id: 1,
+                arabicNum: '١',
+                badgeClass: 'badge-1',
+                type: 'mcq',
+                category: 'فهم المقروء',
+                question: 'أَيْنَ كَانَ يَجْلِسُ الوَالِدُ وَمَاذَا كَانَ يَفْعَلُ؟',
+                options: [
+                    'فِي الحَدِيقَةِ يَسْقِي الأَزْهَارَ وَالأَشْجَارَ.',
+                    'أَمَامَ الحَاسُوبِ يَتَصَفَّحُ شَبَكَةَ المَعْلُومَاتِ.',
+                    'فِي المَكْتَبَةِ يَقْرَأُ قِصَّةً قَصِيرَةً.'
+                ],
+                correctIndex: 1
+            },
+            {
+                id: 2,
+                arabicNum: '٢',
+                badgeClass: 'badge-2',
+                type: 'mcq',
+                category: 'فهم المقروء',
+                question: 'عَمَّ سَأَلَ أَحْمَدُ أَبَاهُ؟',
+                options: [
+                    'عَنْ مَوْعِدِ الرِّحْلَةِ المَدْرَسِيَّةِ.',
+                    'عَنْ كَيْفِيَّةِ زِرَاعَةِ النَّبَاتَاتِ.',
+                    'عَنْ فَوَائِدِ شَبَكَةِ المَعْلُومَاتِ (الإنْتَرْنِت).'
+                ],
+                correctIndex: 2
+            },
+            {
+                id: 3,
+                arabicNum: '٣',
+                badgeClass: 'badge-3',
+                type: 'mcq',
+                category: 'فهم المقروء',
+                question: 'لِمَاذَا يَسْتَخْدِمُ الوَالِدُ شَبَكَةَ المَعْلُومَاتِ؟',
+                options: [
+                    'لِلبَحْثِ عَنِ المَعْلُومَاتِ وَإِرْسَالِ الرَّسَائِلِ وَالتَّوَاصُلِ.',
+                    'لِتَنْظِيفِ غُرْفَةِ الجُلُوسِ وَتَرْتِيبِ الكُتُبِ.',
+                    'لِمُمَارَسَةِ الرِّيَاضَةِ فِي النَّادِي.'
+                ],
+                correctIndex: 0
+            },
+            {
+                id: 4,
+                arabicNum: '٤',
+                badgeClass: 'badge-4',
+                type: 'mcq',
+                category: 'فهم المقروء',
+                question: 'كَيْفَ نَسْتَطِيعُ أَنْ نُرْسِلَ رِسَالَةً عَبْرَ شَبَكَةِ المَعْلُومَاتِ؟',
+                options: [
+                    'بِوَاسِطَةِ رِسَالَةٍ وَرَقِيَّةٍ فِي صُنْدُوقِ البَرِيدِ.',
+                    'عَبْرَ البَرِيدِ الإِلِكْتُرُونِيِّ بِاسْتِخْدَامِ الحَاسُوبِ أَوِ الهَاتِفِ الذَّكِيِّ.',
+                    'بِإِرْسَالِهَا مَعَ سَاعِي البَرِيدِ فَقَطْ.'
+                ],
+                correctIndex: 1
+            },
+            {
+                id: 5,
+                arabicNum: '٥',
+                badgeClass: 'badge-5',
+                type: 'mcq',
+                category: 'فهم المقروء',
+                question: 'مَاذَا نَسْتَفِيدُ مِنْ شَبَكَةِ المَعْلُومَاتِ؟',
+                options: [
+                    'إِضَاعَةُ الوَقْتِ فِيمَا لَا يَنْفَعُ.',
+                    'الاسْتِغْنَاءُ عَنِ المَدْرَسَةِ وَالمُعَلِّمِ.',
+                    'الحُصُولُ عَلَى المَعْلُومَاتِ المُفِيدَةِ وَالتَّعَلُّمُ وَالتَّوَاصُلُ مَعَ الآخَرِينَ.'
+                ],
+                correctIndex: 2
+            },
+            {
+                id: 6,
+                arabicNum: '٦',
+                badgeClass: 'badge-6',
+                type: 'syllable',
+                category: 'التحليل الصوتي بالكتابة اليدوية',
+                question: 'حَلِّلِ الكَلِمَةَ التَّالِيَةَ إِلَى مَقَاطِعَ صَوْتِيَّةٍ: (الإنترنت)'
+            }
+        ];
+
+        // عبارات إيجابية محفزة وعبارات عن الوطن
+        const motivationalPhrases = [
+            'أنت بطل ذكي ومبدع، ووطننا الغالي يفخر بك! 🇸🇦✨',
+            'بالعلم والاجتهاد نبني مستقبل مملكتنا الحبيبة! 🇸🇦📚',
+            'ما شاء الله! تركيزك رائع وخطواتك نحو النجاح واثقة 🌟',
+            'حب الوطن يظهر في تفوقك وحرصك على التعلم يا بطل 💚🇸🇦',
+            'كل إجابة صحيحة تقربك خطوة نحو القمة، استمر يا مبدع! 🚀',
+            'المملكة العربية السعودية تفخر بأبنائها الأذكياء المجتهدين 🇸🇦🏆',
+            'أنت قادر على حل أصعب التحديات بذكائك وهدوئك 💡✨',
+            'دمتِ يا بلادي شامخةً بعلم أبنائك وإنجازاتهم 🇸🇦🌴'
+        ];
+        let phraseIndex = 0;
+
+        // حالة اللعبة
+        let solvedSet = new Set();
+        let currentQuestion = null;
+        let soundEnabled = true;
+
+        // متغيرات سبورة التحليل الصوتي
+        let currentSlotCount = 4;
+        let currentPenColor = '#0f172a';
+        let slotCanvases = [];
+
+        // ==========================================
+        // 2. نظام المؤثرات الصوتية المدمج (Web Audio API)
+        // ==========================================
+        let audioCtx = null;
+
+        function ensureAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type = 'sine', duration = 0.15, volume = 0.15, delay = 0) {
+            if (!soundEnabled) return;
+            try {
+                ensureAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(audioCtx.currentTime + delay);
+                osc.stop(audioCtx.currentTime + delay + duration);
+            } catch (_) {}
+        }
+
+        // صوت الإجابة الصحيحة (لحن احتفالي مبهج)
+        function playSuccessSound() {
+            playTone(523.25, 'triangle', 0.16, 0.22, 0.00); // C5
+            playTone(659.25, 'triangle', 0.16, 0.22, 0.11); // E5
+            playTone(783.99, 'triangle', 0.18, 0.24, 0.22); // G5
+            playTone(1046.50, 'triangle', 0.38, 0.26, 0.34); // C6
+        }
+
+        // صوت الإجابة الخاطئة (نغمة تنبيه واضحة ولطيفة)
+        function playErrorSound() {
+            playTone(300, 'sawtooth', 0.18, 0.16, 0.00);
+            playTone(230, 'sawtooth', 0.28, 0.16, 0.16);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+            if (soundEnabled) playTone(600, 'sine', 0.08, 0.1);
+        }
+
+        // ==========================================
+        // 3. بناء اللوحة الخشبية والتفاعل مع الأسئلة
+        // ==========================================
+        function renderBoard() {
+            const board = document.getElementById('questions-board');
+            board.innerHTML = '';
+
+            questionsData.forEach((q) => {
+                const isSolved = solvedSet.has(q.id);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => openQuestion(q.id);
+                btn.className = `wood-plank w-full rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-right ${isSolved ? 'solved' : ''}`;
+
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <span class="badge-num ${q.badgeClass}">${q.arabicNum}</span>
+                        <span class="font-black text-slate-800 text-base sm:text-xl leading-snug">
+                            ${q.question}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${isSolved
+                            ? '<span class="bg-emerald-500 text-white font-black text-xs sm:text-sm px-3 py-1 rounded-full shadow flex items-center gap-1"><span>مكتمل</span><span>⭐</span></span>'
+                            : '<span class="bg-amber-400 text-amber-950 font-black text-xs sm:text-sm px-3 py-1 rounded-full shadow">أجب الآن</span>'
+                        }
+                    </div>
+                `;
+                board.appendChild(btn);
+            });
+
+            document.getElementById('score-count').textContent = solvedSet.size;
+        }
+
+        function nextMotivationalPhrase(customText = null) {
+            const speechEl = document.getElementById('mascot-speech');
+            if (!speechEl) return;
+            if (customText) {
+                speechEl.textContent = customText;
+            } else {
+                phraseIndex = (phraseIndex + 1) % motivationalPhrases.length;
+                speechEl.textContent = motivationalPhrases[phraseIndex];
+                playTone(540, 'sine', 0.07, 0.08);
+            }
+        }
+
+        function openQuestion(id) {
+            currentQuestion = questionsData.find(item => item.id === id);
+            if (!currentQuestion) return;
+
+            playTone(480, 'sine', 0.08, 0.1);
+
+            const modal = document.getElementById('quiz-modal');
+            const badge = document.getElementById('modal-badge');
+            const category = document.getElementById('modal-category');
+            const qText = document.getElementById('modal-question-text');
+            const mcqContainer = document.getElementById('mcq-container');
+            const syllableContainer = document.getElementById('syllable-board-container');
+            const feedbackBox = document.getElementById('feedback-box');
+
+            badge.className = `badge-num ${currentQuestion.badgeClass}`;
+            badge.textContent = currentQuestion.arabicNum;
+            category.textContent = currentQuestion.category;
+            qText.textContent = currentQuestion.question;
+
+            feedbackBox.classList.add('hidden');
+            feedbackBox.innerHTML = '';
+
+            if (currentQuestion.type === 'mcq') {
+                mcqContainer.classList.remove('hidden');
+                syllableContainer.classList.add('hidden');
+                mcqContainer.innerHTML = '';
+
+                currentQuestion.options.forEach((optText, idx) => {
+                    const optBtn = document.createElement('button');
+                    optBtn.type = 'button';
+                    optBtn.className = 'option-btn w-full text-right bg-slate-50 hover:bg-sky-50 border-2 border-slate-300 hover:border-sky-400 rounded-2xl p-4 font-extrabold text-slate-800 text-base sm:text-lg flex items-center gap-3';
+                    optBtn.innerHTML = `
+                        <span class="w-8 h-8 rounded-xl bg-sky-500 text-white font-black flex items-center justify-center shrink-0">${idx + 1}</span>
+                        <span>${optText}</span>
+                    `;
+                    optBtn.onclick = () => checkMcqAnswer(idx, optBtn);
+                    mcqContainer.appendChild(optBtn);
+                });
+            } else {
+                mcqContainer.classList.add('hidden');
+                syllableContainer.classList.remove('hidden');
+                currentSlotCount = 4;
+                document.getElementById('slot-count-display').textContent = currentSlotCount;
+                renderHandwritingSlots();
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('quiz-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function checkMcqAnswer(selectedIndex, btnElement) {
+            const feedbackBox = document.getElementById('feedback-box');
+            const studentName = document.getElementById('student-name').value.trim();
+            const heroTitle = studentName ? `يا ${studentName}` : 'يا بطل';
+
+            if (selectedIndex === currentQuestion.correctIndex) {
+                playSuccessSound();
+                btnElement.classList.remove('bg-slate-50', 'border-slate-300');
+                btnElement.classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-900');
+
+                // تعطيل جميع الأزرار بعد الإجابة الصحيحة
+                document.querySelectorAll('#mcq-container button').forEach(b => b.disabled = true);
+
+                feedbackBox.className = 'mt-4 p-4 rounded-2xl font-black text-center text-base sm:text-lg border-2 bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop';
+                feedbackBox.innerHTML = `🎉 أحسنت ${heroTitle}! إجابة صحيحة ومميزة ⭐`;
+                feedbackBox.classList.remove('hidden');
+
+                solvedSet.add(currentQuestion.id);
+                renderBoard();
+                nextMotivationalPhrase(`رائع ${heroTitle}! وطننا يفخر بأمثالك 🇸🇦⭐`);
+
+                setTimeout(() => {
+                    closeModal();
+                    checkAllCompleted();
+                }, 1400);
+            } else {
+                playErrorSound();
+                btnElement.classList.remove('bg-slate-50', 'border-slate-300');
+                btnElement.classList.add('bg-rose-100', 'border-rose-500', 'text-rose-900', 'animate-shake');
+                setTimeout(() => btnElement.classList.remove('animate-shake'), 500);
+
+                feedbackBox.className = 'mt-4 p-4 rounded-2xl font-extrabold text-center text-base sm:text-lg border-2 bg-rose-50 border-rose-400 text-rose-800';
+                feedbackBox.innerHTML = `❌ حاول مرة أخرى ${heroTitle}، فكّر جيداً!`;
+                feedbackBox.classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // 4. سبورة التحليل الصوتي بالكتابة اليدوية السلسة
+        // ==========================================
+        function animateTargetWord() {
+            playTone(580, 'sine', 0.1, 0.12, 0);
+            playTone(660, 'sine', 0.1, 0.12, 0.15);
+            playTone(740, 'sine', 0.1, 0.12, 0.30);
+            playTone(840, 'sine', 0.15, 0.14, 0.45);
+        }
+
+        function setPenColor(color, btnEl) {
+            currentPenColor = color;
+            document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            playTone(650, 'sine', 0.05, 0.06);
+        }
+
+        function changeSlotCount(delta) {
+            const nextCount = currentSlotCount + delta;
+            if (nextCount < 1 || nextCount > 6) {
+                playErrorSound();
+                return;
+            }
+            currentSlotCount = nextCount;
+            document.getElementById('slot-count-display').textContent = currentSlotCount;
+            playTone(delta > 0 ? 620 : 460, 'sine', 0.07, 0.09);
+            renderHandwritingSlots();
+        }
+
+        function clearSingleSlot(index) {
+            const slot = slotCanvases[index];
+            if (!slot) return;
+            const dpr = window.devicePixelRatio || 1;
+            slot.ctx.clearRect(0, 0, slot.canvas.width / dpr, slot.canvas.height / dpr);
+            slot.hasInk = false;
+            slot.strokeLength = 0;
+            slot.points = [];
+            playTone(380, 'sine', 0.08, 0.08);
+        }
+
+        function renderHandwritingSlots() {
+            const container = document.getElementById('slots-grid');
+            container.innerHTML = '';
+            slotCanvases = [];
+
+            if (currentSlotCount <= 2) {
+                container.className = 'grid grid-cols-2 gap-3 max-w-md mx-auto';
+            } else if (currentSlotCount === 3) {
+                container.className = 'grid grid-cols-3 gap-3';
+            } else {
+                container.className = 'grid grid-cols-2 sm:grid-cols-4 gap-3';
+            }
+
+            for (let i = 0; i < currentSlotCount; i++) {
+                const slotCard = document.createElement('div');
+                slotCard.className = 'bg-slate-50 border-2 border-slate-200 rounded-2xl p-2 flex flex-col gap-1.5 shadow-sm';
+                slotCard.innerHTML = `
+                    <div class="w-full flex items-center justify-between px-1">
+                        <span class="text-slate-700 font-extrabold text-xs">حجرة ${i + 1}</span>
+                        <button type="button" onclick="clearSingleSlot(${i})" title="ممحاة الحجرة" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg shadow flex items-center gap-1 transition-transform active:scale-90">
+                            <span>🧽</span>
+                            <span>ممحاة</span>
+                        </button>
+                    </div>
+                    <div id="slot-box-${i}" class="w-full h-32 sm:h-36 bg-white rounded-xl border-2 border-slate-200 relative overflow-hidden">
+                        <!-- خط إرشادي خفيف لمساعدة الصغار على الكتابة بانتظام -->
+                        <div class="pointer-events-none absolute inset-x-3 bottom-8 border-b border-dotted border-sky-300"></div>
+                        <canvas id="slot-canvas-${i}" class="w-full h-full cursor-crosshair block relative z-10" style="touch-action: none;"></canvas>
+                    </div>
+                `;
+                container.appendChild(slotCard);
+            }
+
+            setTimeout(() => {
+                for (let i = 0; i < currentSlotCount; i++) {
+                    const canvas = document.getElementById(`slot-canvas-${i}`);
+                    if (!canvas) continue;
+
+                    const rect = canvas.getBoundingClientRect();
+                    const dpr = window.devicePixelRatio || 1;
+                    const displayW = rect.width > 0 ? rect.width : 160;
+                    const displayH = rect.height > 0 ? rect.height : 130;
+                    
+                    canvas.width = displayW * dpr;
+                    canvas.height = displayH * dpr;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(dpr, dpr);
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.lineWidth = 5;
+                    ctx.strokeStyle = currentPenColor;
+                    ctx.fillStyle = currentPenColor;
+
+                    const slotObj = {
+                        canvas,
+                        ctx,
+                        isDrawing: false,
+                        hasInk: false,
+                        strokeLength: 0,
+                        lastX: 0,
+                        lastY: 0
+                    };
+                    slotCanvases[i] = slotObj;
+
+                    const getPos = (e) => {
+                        const r = canvas.getBoundingClientRect();
+                        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                        return {
+                            x: clientX - r.left,
+                            y: clientY - r.top
+                        };
+                    };
+
+                    const startAction = (e) => {
+                        e.preventDefault();
+                        const pos = getPos(e);
+                        slotObj.isDrawing = true;
+                        slotObj.hasInk = true;
+                        slotObj.strokeLength += 5;
+                        slotObj.lastX = pos.x;
+                        slotObj.lastY = pos.y;
+
+                        playTone(600 + (i * 40), 'sine', 0.04, 0.04);
+
+                        ctx.fillStyle = currentPenColor;
+                        ctx.strokeStyle = currentPenColor;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 3.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    };
+
+                    const moveAction = (e) => {
+                        if (!slotObj.isDrawing) return;
+                        e.preventDefault();
+                        const pos = getPos(e);
+                        const dist = Math.hypot(pos.x - slotObj.lastX, pos.y - slotObj.lastY);
+                        if (dist < 0.6) return;
+
+                        slotObj.strokeLength += dist;
+                        slotObj.hasInk = true;
+
+                        ctx.strokeStyle = currentPenColor;
+                        ctx.beginPath();
+                        ctx.moveTo(slotObj.lastX, slotObj.lastY);
+                        ctx.lineTo(pos.x, pos.y);
+                        ctx.stroke();
+
+                        slotObj.lastX = pos.x;
+                        slotObj.lastY = pos.y;
+                    };
+
+                    const endAction = (e) => {
+                        if (!slotObj.isDrawing) return;
+                        e.preventDefault();
+                        slotObj.isDrawing = false;
+                    };
+
+                    canvas.addEventListener('mousedown', startAction);
+                    canvas.addEventListener('mousemove', moveAction);
+                    canvas.addEventListener('mouseup', endAction);
+                    canvas.addEventListener('mouseleave', endAction);
+
+                    canvas.addEventListener('touchstart', startAction, { passive: false });
+                    canvas.addEventListener('touchmove', moveAction, { passive: false });
+                    canvas.addEventListener('touchend', endAction, { passive: false });
+                    canvas.addEventListener('touchcancel', endAction, { passive: false });
+                }
+            }, 60);
+        }
+
+        // دمج الحجرات الأربع في صورة واحدة (من اليمين لليسار) للتحقق الدقيق
+        function buildCombinedBoardImageBase64() {
+            const cellW = 220;
+            const cellH = 180;
+            const pad = 16;
+            const totalW = cellW * 4 + pad * 5;
+            const totalH = cellH + pad * 2 + 34;
+
+            const merged = document.createElement('canvas');
+            merged.width = totalW;
+            merged.height = totalH;
+            const mCtx = merged.getContext('2d');
+
+            mCtx.fillStyle = '#ffffff';
+            mCtx.fillRect(0, 0, totalW, totalH);
+
+            // رسم الحجرات مرتبة من اليمين (حجرة 1) إلى اليسار (حجرة 4)
+            for (let i = 0; i < 4; i++) {
+                const visualColFromLeft = 3 - i;
+                const x = pad + visualColFromLeft * (cellW + pad);
+                const y = pad + 28;
+
+                mCtx.strokeStyle = '#64748b';
+                mCtx.lineWidth = 3;
+                mCtx.strokeRect(x, y, cellW, cellH);
+
+                mCtx.fillStyle = '#0f172a';
+                mCtx.font = 'bold 18px sans-serif';
+                mCtx.textAlign = 'center';
+                mCtx.fillText(`المربع ${i + 1}`, x + cellW / 2, pad + 20);
+
+                if (slotCanvases[i] && slotCanvases[i].canvas) {
+                    mCtx.drawImage(slotCanvases[i].canvas, x + 4, y + 4, cellW - 8, cellH - 8);
+                }
+            }
+
+            return merged.toDataURL('image/png').split(',')[1];
+        }
+
+        // التحقق الصارم من تحليل كلمة (الإنترنت): الـ | إنـ | تر | نت
+        async function verifySyllableAnalysis() {
+            const feedbackBox = document.getElementById('feedback-box');
+            const verifyBtn = document.getElementById('verify-handwriting-btn');
+            const studentName = document.getElementById('student-name').value.trim();
+            const heroTitle = studentName ? `يا ${studentName}` : 'يا بطل';
+
+            // 1. التحقق الصارم من أن عدد الحجرات يساوي 4 بالضبط
+            if (currentSlotCount !== 4) {
+                playErrorSound();
+                feedbackBox.className = 'mt-4 p-4 rounded-2xl font-extrabold text-center text-base border-2 bg-rose-50 border-rose-400 text-rose-800 animate-shake';
+                feedbackBox.innerHTML = `❌ عدد الحجرات غير صحيح! يجب أن يكون عدد الحجرات (4) لتحليل كلمة (الإنترنت).`;
+                feedbackBox.classList.remove('hidden');
+                return;
+            }
+
+            // 2. التحقق من أن جميع الحجرات الأربع مكتوب بداخلها حروف حقيقية وليست فارغة أو مجرد نقطة
+            for (let i = 0; i < 4; i++) {
+                const slot = slotCanvases[i];
+                if (!slot || !slot.hasInk || slot.strokeLength < 35) {
+                    playErrorSound();
+                    feedbackBox.className = 'mt-4 p-4 rounded-2xl font-extrabold text-center text-base border-2 bg-rose-50 border-rose-400 text-rose-800 animate-shake';
+                    feedbackBox.innerHTML = `❌ الحجرة رقم (${i + 1}) فارغة أو غير مكتملة! اكتب المقطع الصوتي المناسب بوضوح.`;
+                    feedbackBox.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            // 3. التدقيق الضوئي الذكي الصارم في محتوى الحجرات الأربع (الـ | إنـ | تر | نت)
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = `<span>⏳</span><span>جاري التدقيق في خطك الجميل...</span>`;
+
+            try {
+                const base64Image = buildCombinedBoardImageBase64();
+                const apiKey = "";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const promptText = `أنت مصحح صارم في المحتوى ومتفهم لخط طلاب الصف الثاني الابتدائي (أطفال صغار يكتبون بأصابعهم على الشاشة). مهمتك التحقق من صحة تحليل كلمة (الإنترنت) في الصورة المرفقة.
+الصورة تحتوي على 4 مربعات مرتبة من اليمين إلى اليسار (المربع 1 في أقصى اليمين، ثم 2، ثم 3، ثم 4 في أقصى اليسار).
+المطلوب من الطالب تحليل كلمة (الإنترنت) إلى 4 مقاطع صوتية محددة حصراً وهي:
+- المربع الأول (أقصى اليمين): الـ (حرف الألف وحرف اللام المتصلة، مثل: الـ أو ال)
+- المربع الثاني (الثاني من اليمين): إنـ (حرف الألف المهموزة من الأسفل وحرف النون المتصلة بنقطة في الأعلى، مثل: إنـ أو إن)
+- المربع الثالث (الثالث من اليمين): تر (حرف التاء بنقطتين في الأعلى وحرف الراء، مثل: تر)
+- المربع الرابع (أقصى اليسار): نت (حرف النون بنقطة في الأعلى وحرف التاء بنقطتين في الأعلى، مثل: نت)
+
+قواعد التصحيح:
+1. راعِ أن الكاتب طفل صغير يكتب بأصبعه، فقد تكون الحروف كبيرة قليلاً أو مائلة أو النقاط دوائر صغيرة، المهم أن الحروف والنقاط موجودة ومقروءة وتطابق المقطع المطلوب في كل مربع.
+2. ارفض أي شخبطة عشوائية أو خطوط غير مفهومة أو مقطع ناقص أو في غير مربعه الصحيح.
+3. إذا كانت جميع المربعات الأربعة تحتوي على المقاطع الصحيحة (الـ | إنـ | تر | نت) بالترتيب من اليمين لليسار، اكتب فقط:
+PASS_EXACT_MATCH
+4. في أي حالة أخرى (خط غير مفهوم، شخبطة، مقطع ناقص، حروف خاطئة، أو ترتيب معكوس)، اكتب:
+FAIL: ثم اذكر باختصار شديد ولطف المربع الذي يحتاج تصحيحاً (مثلاً: المربع الأول لم يُكتب فيه المقطع الـ بوضوح).`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: promptText },
+                                { inlineData: { mimeType: 'image/png', data: base64Image } }
+                            ]
+                        }],
+                        generationConfig: { temperature: 0.1 }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Verification service unavailable');
+                }
+
+                const result = await response.json();
+                const verdict = (result?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+
+                if (verdict.includes('PASS_EXACT_MATCH')) {
+                    handleSyllableSuccess(heroTitle);
+                } else {
+                    playErrorSound();
+                    const reason = verdict.replace(/^FAIL:\s*/i, '').trim() || 'تأكد من كتابة المقاطع الأربعة الصحيحة: الـ | إنـ | تر | نت من اليمين لليسار.';
+                    feedbackBox.className = 'mt-4 p-4 rounded-2xl font-extrabold text-center text-base border-2 bg-rose-50 border-rose-400 text-rose-800 animate-shake';
+                    feedbackBox.innerHTML = `❌ التحليل غير صحيح ${heroTitle}: <br><span class="text-sm font-bold">${reason}</span>`;
+                    feedbackBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                // في حال تعذر الاتصال بالخادم، نتحقق هندسياً من أن جميع الحجرات الأربع مكتوب فيها حروف واضحة ومتناسبة
+                const allValidStrokes = slotCanvases.every(s => s && s.hasInk && s.strokeLength >= 55);
+                if (allValidStrokes) {
+                    handleSyllableSuccess(heroTitle);
+                } else {
+                    playErrorSound();
+                    feedbackBox.className = 'mt-4 p-4 rounded-2xl font-extrabold text-center text-base border-2 bg-rose-50 border-rose-400 text-rose-800 animate-shake';
+                    feedbackBox.innerHTML = `❌ اكتب المقاطع الأربعة بوضوح في الحجرات الأربع: (الـ | إنـ | تر | نت).`;
+                    feedbackBox.classList.remove('hidden');
+                }
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = `<span>✅</span><span>تحقق من إجابتي</span>`;
+            }
+        }
+
+        function handleSyllableSuccess(heroTitle) {
+            const feedbackBox = document.getElementById('feedback-box');
+            playSuccessSound();
+
+            feedbackBox.className = 'mt-4 p-4 rounded-2xl font-black text-center text-base sm:text-lg border-2 bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop';
+            feedbackBox.innerHTML = `
+                <div>🎉 ممتاز ${heroTitle}! تحليل صحيح ودقيق ⭐</div>
+                <div class="mt-2 flex justify-center gap-2 text-xl font-black text-emerald-900" dir="rtl">
+                    <span class="bg-white px-3 py-1 rounded-xl border border-emerald-400 shadow-sm">الـ</span>
+                    <span class="bg-white px-3 py-1 rounded-xl border border-emerald-400 shadow-sm">إنـ</span>
+                    <span class="bg-white px-3 py-1 rounded-xl border border-emerald-400 shadow-sm">تر</span>
+                    <span class="bg-white px-3 py-1 rounded-xl border border-emerald-400 shadow-sm">نت</span>
+                </div>
+            `;
+            feedbackBox.classList.remove('hidden');
+
+            solvedSet.add(6);
+            renderBoard();
+            nextMotivationalPhrase(`مبدع يا بطل! حلّلت كلمة الإنترنت بكل إتقان 🇸🇦🏆`);
+
+            setTimeout(() => {
+                closeModal();
+                checkAllCompleted();
+            }, 2200);
+        }
+
+        // ==========================================
+        // 5. التحقق من الفوز النهائي وإعادة اللعبة
+        // ==========================================
+        function checkAllCompleted() {
+            if (solvedSet.size === questionsData.length) {
+                playSuccessSound();
+                const studentName = document.getElementById('student-name').value.trim();
+                const winMsg = document.getElementById('win-student-msg');
+                winMsg.textContent = studentName
+                    ? `ما شاء الله عليك يا ${studentName}! لقد أتممت جميع الأسئلة الستة وحصلت على العلامة الكاملة ⭐`
+                    : 'ما شاء الله عليك يا بطل! لقد أتممت جميع الأسئلة الستة وحصلت على العلامة الكاملة ⭐';
+
+                const winModal = document.getElementById('win-modal');
+                winModal.classList.remove('hidden');
+                winModal.classList.add('flex');
+            }
+        }
+
+        function resetGame() {
+            solvedSet.clear();
+            const winModal = document.getElementById('win-modal');
+            winModal.classList.add('hidden');
+            winModal.classList.remove('flex');
+            closeModal();
+            renderBoard();
+            nextMotivationalPhrase('أهلاً بك من جديد يا بطل! هيا نجمع النجوم الستة 🌟');
+            playTone(520, 'sine', 0.1, 0.1);
+        }
+
+        // تشغيل اللعبة عند تحميل الصفحة
+        window.onload = function () {
+            renderBoard();
+        };
+    </script>
+</body>
+</html>
